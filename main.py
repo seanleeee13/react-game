@@ -23,7 +23,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-pwd = PasswordHash(hashers=[Argon2Hasher])
+pwd = PasswordHash(hashers=[Argon2Hasher()])
 cols = """
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,6 +32,9 @@ CREATE TABLE IF NOT EXISTS users (
     score INTEGER DEFAULT 0
 )
 """
+
+username_re = "[A-Za-z_0-9]{6,20}|admin"
+password_re = r"[A-Za-z0-9!@#$%^&*-_+=\|/.,~]{8,20}" + (r"|1234" if os.getenv("IS_PRODUCTION") != "true" else "")
 
 def create_token(data: dict, time: datetime.timedelta = datetime.timedelta(hours=24)):
     expire = now = datetime.datetime.now(datetime.timezone.utc)
@@ -50,20 +53,19 @@ def decode_token(token: str):
         return False, jwt.InvalidTokenError
 
 @app.post("/api/user", status_code=status.HTTP_201_CREATED)
-async def signup(form_data: OAuth2PasswordRequestForm = Depends()):
-    if not re.fullmatch("[A-Za-z_0-9]{6,20}", form_data.username):
+async def signup(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
+    if not re.fullmatch(username_re, form_data.username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bad username"
         )
-    if not re.fullmatch("[A-Za-z0-9!@#$%^&*-_+=\|/.,~]{8,20}", form_data.password):
+    if not re.fullmatch(password_re, form_data.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bad password"
         )
     async with aiosqlite.connect("data.db") as con:
         cur = await con.cursor()
-        await cur.execute(cols)
         try:
             await cur.execute(
                 "INSERT INTO users (username, password) VALUES (?, ?)",
@@ -75,16 +77,26 @@ async def signup(form_data: OAuth2PasswordRequestForm = Depends()):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Used username"
         )
-    return {"detail": "Created", }
+    token = create_token({"sub": form_data.username})
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        max_age=604800,
+        expires=604800,
+        samesite="lax",
+        secure=os.getenv("IS_PRODUCTION") == "true"
+    )
+    return {"detail": "Created"}
 
 @app.post("/api/user/login")
 async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
-    if not re.fullmatch("[A-Za-z_0-9]{6,20}", form_data.username):
+    if not re.fullmatch(username_re, form_data.username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bad username"
         )
-    if not re.fullmatch("[A-Za-z0-9!@#$%^&*-_+=\|/.,~]{8,20}", form_data.password):
+    if not re.fullmatch(password_re, form_data.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bad password"
@@ -92,7 +104,6 @@ async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depen
     async with aiosqlite.connect("data.db") as con:
         con.row_factory = aiosqlite.Row
         cur = await con.cursor()
-        await cur.execute(cols)
         user = await cur.execute(
             "SELECT * FROM users WHERE username = ?",
             (form_data.username, )
@@ -156,7 +167,7 @@ async def get_current_user(access_token: str = Cookie(None)):
 async def logout(response: Response, score: int, current_user: str = Depends(get_current_user)):
     async with aiosqlite.connect("data.db") as con:
         await con.execute(
-            "UPDATE users SET score = ? WHERE username = ?",
+            "UPDATE users SET score = MAX(score, ?) WHERE username = ?",
             (score, current_user)
         )
         await con.commit()
