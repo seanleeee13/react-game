@@ -88,7 +88,7 @@ function GamePage() {
     return (
         <>
             <a href="/" style={{display: "block", marginBottom: "24px"}}>
-                <img src="/icon.svg" alt="Icon" width={100} height={100} />
+                <img src="/images/icon.svg" alt="Icon" width={100} height={100} />
             </a>
             {testTextState.text.map(text => <Typography variant="h4" gutterBottom color={text.color}>{text.text}</Typography>)}
             <Box sx={{display: "flex", alignItems: "center", gap: "8px"}}>
