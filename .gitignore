@@ -2,8 +2,8 @@
 .env
 *.db
 react-game
-.vscode
-__pycache__/
+.vscode/*
+__pycache__/*
 
 # Logs
 react-game-fe/logs
