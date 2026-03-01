@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, status, Response, Depends, Cookie
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 from contextlib import asynccontextmanager
@@ -17,7 +17,8 @@ dotenv.load_dotenv()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     async with aiosqlite.connect("data.db") as con:
-        await con.execute(cols)
+        cur = await con.cursor()
+        await cur.execute(cols)
         await con.commit()
     yield
 
@@ -166,7 +167,8 @@ async def get_current_user(access_token: str = Cookie(None)):
 @app.post("/api/user/logout")
 async def logout(response: Response, score: int, current_user: str = Depends(get_current_user)):
     async with aiosqlite.connect("data.db") as con:
-        await con.execute(
+        cur = await con.cursor()
+        await cur.execute(
             "UPDATE users SET score = MAX(score, ?) WHERE username = ?",
             (score, current_user)
         )
@@ -178,6 +180,26 @@ async def logout(response: Response, score: int, current_user: str = Depends(get
         samesite="lax"
     )
     return {"detail": "Logged out"}
+
+@app.get("/api/user/me")
+async def get_user_me(current_user: str = Depends(get_current_user)):
+    return RedirectResponse(url=f"/api/user/{current_user}", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+
+@app.get("/api/user/{username:path}")
+async def get_user(username: str, _: str = Depends(get_current_user)):
+    async with aiosqlite.connect("data.db") as con:
+        cur = await con.cursor()
+        sel = await cur.execute(
+            "SELECT username, score FROM users WHERE username = ?",
+            (username, )
+        )
+        user = await sel.fetchone()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+    return {"detail": "Success", "user": dict(user)}
 
 app.mount("/assets", StaticFiles(directory="react-game-fe/dist/assets"), name="assets")
 app.mount("/images", StaticFiles(directory="react-game-fe/dist/images"), name="images")
