@@ -1,24 +1,24 @@
 # Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+react-game-fe/logs
+react-game-fe/*.log
+react-game-fe/npm-debug.log*
+react-game-fe/yarn-debug.log*
+react-game-fe/yarn-error.log*
+react-game-fe/pnpm-debug.log*
+react-game-fe/lerna-debug.log*
 
 node_modules
-dist
-dist-ssr
+react-game-fe/dist
+react-game-fe/dist-ssr
 *.local
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+react-game-fe/.idea
+react-game-fe/.DS_Store
+react-game-fe/*.suo
+react-game-fe/*.ntvs*
+react-game-fe/*.njsproj
+react-game-fe/*.sln
+react-game-fe/*.sw?
