@@ -4,6 +4,8 @@
 react-game
 .vscode/*
 __pycache__/*
+__pycache__
+.vscode
 
 # Logs
 react-game-fe/logs

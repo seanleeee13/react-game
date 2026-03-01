@@ -179,9 +179,9 @@ async def logout(response: Response, score: int, current_user: str = Depends(get
     )
     return {"detail": "Logged out"}
 
-app.mount("/assets", StaticFiles(directory="react-game/dist/assets"), name="assets")
-app.mount("/images", StaticFiles(directory="react-game/dist/images"), name="images")
+app.mount("/assets", StaticFiles(directory="react-game-fe/dist/assets"), name="assets")
+app.mount("/images", StaticFiles(directory="react-game-fe/dist/images"), name="images")
 
 @app.get("/{catchall:path}")
 async def serve_frontend():
-    return FileResponse("react-game/dist/index.html")
+    return FileResponse("react-game-fe/dist/index.html")
