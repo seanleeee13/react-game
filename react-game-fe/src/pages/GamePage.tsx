@@ -37,9 +37,9 @@ function GamePage() {
     }
     const setOptions = (value: string) => {
         if (value.startsWith("/")) {
-            return ["/hello", "/clear"]
+            return ["/hello", "/clear"];
         } else {
-            return []
+            return [];
         }
     }
     const updateAutocomplete = (_event: React.SyntheticEvent | null, value: string | null) => {
